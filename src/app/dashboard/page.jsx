@@ -97,15 +97,15 @@ export default function Dashboard() {
         ) : tasks.length === 0 ? (
           <p>No tasks found.</p>
         ) : (
-          <Card className="p-3">
+          <div className="p-3 flex-col block rounded-2xl border gap-3">
             {tasks.map((task) => (
-              <div key={task.id} className="border p-2 rounded">
+              <div key={task.id} className="p-2 rounded-2xl">
                 <strong>{task.title}</strong>
                 <p>Description : <i>{task.description}</i></p>
                 <p>Status: {task.completed ? "Completed" : "Pending"}</p>
               </div>
             ))}
-          </Card>
+          </div>
         )}
       </div>
     </>
