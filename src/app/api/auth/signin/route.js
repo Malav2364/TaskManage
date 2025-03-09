@@ -39,7 +39,7 @@ export async function POST(req) {
       { expiresIn: "7d" } // Token valid for 7 days
     );
 
-    return NextResponse.json({ message: "Login successful", token }, { status: 200 });
+    return NextResponse.json({ message: "Login successful", token, id : user.id, email : user.email}, { status: 200 });
   } catch (error) {
     console.error("Sign-in Error:", error);
     return NextResponse.json({ error: "Login failed" }, { status: 500 });

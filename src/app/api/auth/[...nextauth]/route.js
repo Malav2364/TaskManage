@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import redis from "@/lib/redis";
 
 export const authOptions = {
   providers: [
@@ -11,18 +12,24 @@ export const authOptions = {
       },
       async authorize(credentials) {
         try {
-          console.log("Received credentials:", credentials);
+          const cachedUser = await redis.get(`user : ${credentials.email}`)
+          if (cachedUser) {
+            console.log("Logged In from Cache")
+            return JSON.parse(cachedUser)
+          }
 
-          const user = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/signin`, {
+          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/signin`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
-          }).then((res) => res.json());
+          })
+
+          const user = await response.json()
 
           if (!user || user.error) {
             throw new Error(user.error || "Invalid credentials");
           }
-
+          await redis.setex(`user : ${credentials.email}`, 3600, JSON.stringify(user))
           return user;
         } catch (error) {
           console.error("Authorization error:", error);

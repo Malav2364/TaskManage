@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import redis from "@/lib/redis";
+import { getToken } from "next-auth/jwt";
 
 
 export async function GET(req, { params }) {
@@ -20,13 +21,25 @@ export async function GET(req, { params }) {
 }
 
 export async function PUT(req, { params }){
+    const token = await getToken({req, secret : process.env.NEXTAUTH_SECRET});
+    if (!token) {
+        return NextResponse.json({error : "Unauthorized"}, {status : 401})
+    }
     try {
-        const {id} = await params
-        const body = await req.json();
+        const {completed} = await req.json();
+        const taskId = params.id;
+
+        const task = await prisma.task.findUnique({
+            where : {id : taskId}
+        })
+
+        if (!task || task.userId !== token.user.id) {
+            return NextResponse.json({error : "Not authorized to update task"}, {status : 401})
+        }
 
         const updatedTask = await prisma.task.update({
-            where : {id},
-            data : body
+            where : {id : taskId},
+            data : {completed},
         })
         await redis.del("tasks");
         return NextResponse.json({success : true, updatedTask})
@@ -36,10 +49,20 @@ export async function PUT(req, { params }){
 }
 
 export async function DELETE(req, { params }){
+    const token = await getToken({req, secret : process.env.NEXTAUTH_SECRET});
+    if (!token) {
+        return NextResponse.json({error : "Unauthorized"}, {status : 401});
+    }
     try {
-        const {id} = params
+        const taskId = params.id;
+        const task = await prisma.task.findUnique({
+            where : {id : taskId}
+        })
+        if (!task || task.userId !== token.user.id) {
+            return NextResponse.json({error: "Not authorized to delete this task"}, {status : 401})
+        }
         await prisma.task.delete({
-            where : {id}
+            where : {id : taskId}
         });
         await redis.del("tasks");
         return NextResponse.json({success : true, message : "Task Deleted Successfully !"})
