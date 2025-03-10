@@ -4,18 +4,58 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await signIn("credentials", { redirect: false, email, password });
-    if (result?.ok) router.push("/dashboard");
-  };
+    setLoading(true);
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Signing in...");
+    
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
 
+      if (result?.error) {
+        // Dismiss loading toast and show error toast
+        toast.dismiss(loadingToast);
+        toast.error(result.error || "Invalid email or password", {
+          duration: 4000,
+          icon: '🔒',
+          style: {
+            border: '1px solid #E53E3E',
+            padding: '16px',
+          },
+        });
+      } else if (result?.ok) {
+        // Dismiss loading toast and show success toast
+        toast.dismiss(loadingToast);
+        toast.success("Signed in successfully!", {
+          duration: 3000,
+          icon: '✅',
+        });
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      // Dismiss loading toast and show error toast for unexpected errors
+      toast.dismiss(loadingToast);
+      toast.error("An unexpected error occurred. Please try again.", {
+        duration: 4000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="flex h-screen items-center justify-center bg-gray-100">
       <motion.div 

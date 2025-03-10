@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
 import Providers from "./providers";
 
 const geistSans = Geist({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
       >
         <Providers>
            {children}
+           <Toaster position="top-center" reverseOrder={false}/>
         </Providers>
       </body>
     </html>

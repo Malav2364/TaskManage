@@ -2,17 +2,36 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import TaskForm from "@/components/taskForm";
 import axios from "axios";
-import { Card } from "@/components/ui/card";
+import { Toaster } from "react-hot-toast";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Improve task handling function using useCallback for better performance
+  const handleTaskAdded = useCallback((newTask) => {
+    // Use a functional update to ensure we're working with the latest state
+    setTasks(prevTasks => {
+      // Check if the task already exists (might happen with optimistic updates)
+      const exists = prevTasks.some(task => 
+        task.id === newTask.id || task._id === newTask._id
+      );
+      
+      // If it exists, don't duplicate it
+      if (exists) {
+        return prevTasks;
+      }
+      
+      // Add the new task at the beginning of the list
+      return [newTask, ...prevTasks];
+    });
+  }, []);
 
   // First check if user is authenticated
   useEffect(() => {
@@ -29,8 +48,6 @@ export default function Dashboard() {
       }
       
       try {
-        console.log("Fetching tasks with session:", session);
-        
         // Notice the token is inside session.user.token based on your data
         const token = session.user.token;
         
@@ -41,18 +58,16 @@ export default function Dashboard() {
           return;
         }
         
-        console.log("Using token for API request:", token.substring(0, 10) + "...");
-        
         const response = await axios.get("/api/tasks", {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
         
-        console.log("Tasks API response:", response.data);
         setTasks(response.data);
       } catch (err) {
         console.error("Error fetching tasks:", err);
+        setError("Failed to load tasks. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -81,6 +96,7 @@ export default function Dashboard() {
               ) : (
                 <p>No session data found.</p>
               )}
+              
               <button
                 className="focus:outline-none text-white bg-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:ring-yellow-300 font-medium rounded-xl text-sm p-2 m-1 dark:focus:ring-yellow-900" 
                 onClick={signOut}>
@@ -91,20 +107,41 @@ export default function Dashboard() {
         </nav>
       </header>
       <div className="p-4">
-        <h2 className="text-xl font-bold mb-4">Your Tasks</h2>
+        <div className="flex flex-row items-center justify-between p-3 rounded-2xl">
+          <div>
+            <h2 className="font-bold text-2xl">Your Tasks</h2>
+          </div>
+          <div>
+            <TaskForm onTaskAdded={handleTaskAdded} />
+          </div>
+        </div>
         {error ? (
           <p className="text-red-500">{error}</p>
         ) : tasks.length === 0 ? (
           <p>No tasks found.</p>
         ) : (
-          <div className="p-3 flex-col block rounded-2xl border gap-3">
-            {tasks.map((task) => (
-              <div key={task.id} className="p-2 rounded-2xl">
-                <strong>{task.title}</strong>
-                <p>Description : <i>{task.description}</i></p>
-                <p>Status: {task.completed ? "Completed" : "Pending"}</p>
-              </div>
-            ))}
+          <div className="p-3 flex flex-col space-y-3 rounded-2xl border">
+            {tasks.map((task) => {
+              const taskKey = task.id || task._id;
+              
+              if (!taskKey) {
+                console.warn("Task is missing an ID:", task);
+                return null; // Skip tasks without an ID
+              }
+              
+              return (
+                <div 
+                  key={taskKey} 
+                  className="p-3 rounded-2xl border border-red-100 hover:shadow-sm transition-shadow"
+                >
+                  <strong>{task.title}</strong>
+                  {task.description && (
+                    <p>Description: <i>{task.description}</i></p>
+                  )}
+                  <p>Status: {task.completed ? "Completed" : "Pending"}</p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
