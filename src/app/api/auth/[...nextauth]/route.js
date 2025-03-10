@@ -12,12 +12,6 @@ export const authOptions = {
       },
       async authorize(credentials) {
         try {
-          const cachedUser = await redis.get(`user : ${credentials.email}`)
-          if (cachedUser) {
-            console.log("Logged In from Cache")
-            return JSON.parse(cachedUser)
-          }
-
           const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/signin`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
