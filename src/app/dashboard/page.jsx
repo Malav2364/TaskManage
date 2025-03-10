@@ -86,19 +86,19 @@ export default function Dashboard() {
     <>
       <header>
         <nav>
-          <div className="flex flex-row items-center justify-between p-2.5 m-3 rounded-xl bg-red-200">
+          <div className="flex flex-row items-center justify-between p-2 m-3 rounded-full border">
             <div>
-              <h3>Taskoo</h3>
+              <h1 className="text-2xl font-bold text-green-500 p-1">Taskoo</h1>
             </div>
-            <div className="flex flex-row items-center gap-3 text-red-600">
+            <div className="flex flex-row items-center gap-3 text-green-500">
               {session?.user?.email ? (
-                <p>{session.user.email}</p>
+                <p className="text-sm font-bold border rounded-full p-1">{session.user.email}</p>
               ) : (
                 <p>No session data found.</p>
               )}
               
               <button
-                className="focus:outline-none text-white bg-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:ring-yellow-300 font-medium rounded-xl text-sm p-2 m-1 dark:focus:ring-yellow-900" 
+                className="focus:outline-none text-white bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm p-2 m-2 dark:focus:ring-yellow-900 text-center" 
                 onClick={signOut}>
                 Logout
               </button>

@@ -139,7 +139,7 @@ export default function TaskForm({ onTaskAdded }) {
     <button
       ref={buttonRef}
       onClick={openModal}
-      className="focus:outline-none text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-xl text-sm p-2 m-1"
+      className="focus:outline-none text-white bg-red-500 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-xl text-sm p-2 m-1"
       aria-label="Add task"
       type="button"
     >
