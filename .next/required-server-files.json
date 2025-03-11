@@ -96,7 +96,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "D:\\Downloads\\Modern Database techniques\\Postgres(Prisma, redis)\\taskmanage",
+    "outputFileTracingRoot": "D:\\Downloads\\Taskoo\\TaskManage",
     "experimental": {
       "nodeMiddleware": false,
       "cacheLife": {
@@ -174,7 +174,7 @@
       "forceSwcTransforms": false,
       "largePageDataBytes": 128000,
       "turbo": {
-        "root": "D:\\Downloads\\Modern Database techniques\\Postgres(Prisma, redis)\\taskmanage"
+        "root": "D:\\Downloads\\Taskoo\\TaskManage"
       },
       "typedRoutes": false,
       "typedEnv": false,
@@ -280,7 +280,7 @@
     "bundlePagesRouterDependencies": false,
     "configFileName": "next.config.mjs"
   },
-  "appDir": "D:\\Downloads\\Modern Database techniques\\Postgres(Prisma, redis)\\taskmanage",
+  "appDir": "D:\\Downloads\\Taskoo\\TaskManage",
   "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",

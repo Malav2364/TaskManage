@@ -1,4 +1,4 @@
-// File: D:\Downloads\Modern Database techniques\Postgres(Prisma, redis)\taskmanage\src\app\api\test-db\route.js
+// File: D:\Downloads\Taskoo\TaskManage\src\app\api\test-db\route.js
 import * as entry from '../../../../../src/app/api/test-db/route.js'
 import type { NextRequest } from 'next/server.js'
 

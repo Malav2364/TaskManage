@@ -1,4 +1,4 @@
-// File: D:\Downloads\Modern Database techniques\Postgres(Prisma, redis)\taskmanage\src\app\signup\page.jsx
+// File: D:\Downloads\Taskoo\TaskManage\src\app\signup\page.jsx
 import * as entry from '../../../../src/app/signup/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
