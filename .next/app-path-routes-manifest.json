@@ -1,14 +1,14 @@
 {
-  "/_not-found/page": "/_not-found",
-  "/api/auth/signup/route": "/api/auth/signup",
-  "/api/test-db/route": "/api/test-db",
   "/api/tasks/[id]/route": "/api/tasks/[id]",
   "/api/auth/signin/route": "/api/auth/signin",
-  "/favicon.ico/route": "/favicon.ico",
+  "/api/auth/signup/route": "/api/auth/signup",
+  "/api/test-db/route": "/api/test-db",
   "/api/tasks/route": "/api/tasks",
+  "/favicon.ico/route": "/favicon.ico",
+  "/_not-found/page": "/_not-found",
   "/login/page": "/login",
+  "/signup/page": "/signup",
   "/page": "/",
   "/dashboard/page": "/dashboard",
-  "/signup/page": "/signup",
   "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]"
 }
