@@ -78,7 +78,9 @@ export default function Dashboard() {
 
   // Show loading while checking authentication or fetching tasks
   if (status === "loading" || (status === "authenticated" && loading)) {
-    return <p>Loading...</p>;
+    return <div className="flex justify-center items-center">
+      <p className="text-2xl font-bold">Loading your workload don't Panic !</p>
+    </div>;
   }
 
   // User is authenticated and tasks are loaded (or failed to load)

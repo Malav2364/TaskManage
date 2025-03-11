@@ -1,7 +1,9 @@
 {
   "/page": "app/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/login/page": "app/login/page.js",
-  "/_not-found/page": "app/_not-found/page.js"
+  "/api/auth/signin/route": "app/api/auth/signin/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/api/tasks/route": "app/api/tasks/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js"
 }
