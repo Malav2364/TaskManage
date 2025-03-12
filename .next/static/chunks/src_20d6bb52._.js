@@ -452,21 +452,68 @@ function Dashboard() {
     const [tasks, setTasks] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(true);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
-    // Improve task handling function using useCallback for better performance
+    // Ref to track if a delete operation is in progress
+    const deleteInProgress = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
+    const fetchTasks = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "Dashboard.useCallback[fetchTasks]": async ()=>{
+            if (status !== "authenticated" || !session) {
+                return;
+            }
+            setLoading(true);
+            try {
+                const token = session.user.token;
+                if (!token) {
+                    console.error("No token available in session");
+                    setError("Authentication token missing");
+                    setLoading(false);
+                    return;
+                }
+                const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/api/tasks", {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const tasksFromServer = response.data;
+                const uniqueTasks = [];
+                const seenIds = new Set();
+                for (const task of tasksFromServer){
+                    const taskId = task.id || task._id;
+                    if (taskId && !seenIds.has(taskId)) {
+                        seenIds.add(taskId);
+                        uniqueTasks.push(task);
+                    }
+                }
+                setTasks(uniqueTasks);
+            } catch (err) {
+                console.error("Error fetching tasks:", err);
+                setError("Failed to load tasks. Please try again.");
+            } finally{
+                setLoading(false);
+            }
+        }
+    }["Dashboard.useCallback[fetchTasks]"], [
+        session,
+        status
+    ]);
     const handleTaskAdded = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "Dashboard.useCallback[handleTaskAdded]": (newTask)=>{
-            // Use a functional update to ensure we're working with the latest state
+            const newTaskId = newTask.id || newTask._id;
+            if (!newTaskId) {
+                console.warn("New task missing ID:", newTask);
+                return;
+            }
             setTasks({
                 "Dashboard.useCallback[handleTaskAdded]": (prevTasks)=>{
-                    // Check if the task already exists (might happen with optimistic updates)
-                    const exists = prevTasks.some({
-                        "Dashboard.useCallback[handleTaskAdded].exists": (task)=>task.id === newTask.id || task._id === newTask._id
-                    }["Dashboard.useCallback[handleTaskAdded].exists"]);
-                    // If it exists, don't duplicate it
-                    if (exists) {
+                    const existingTaskIndex = prevTasks.findIndex({
+                        "Dashboard.useCallback[handleTaskAdded].existingTaskIndex": (task)=>task.id && task.id === newTaskId || task._id && task._id === newTaskId
+                    }["Dashboard.useCallback[handleTaskAdded].existingTaskIndex"]);
+                    if (existingTaskIndex !== -1) {
                         return prevTasks;
                     }
-                    // Add the new task at the beginning of the list
+                    const toastId = `add-${newTaskId}`;
+                    __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].success(`Task added successfully`, {
+                        id: toastId
+                    });
                     return [
                         newTask,
                         ...prevTasks
@@ -475,7 +522,110 @@ function Dashboard() {
             }["Dashboard.useCallback[handleTaskAdded]"]);
         }
     }["Dashboard.useCallback[handleTaskAdded]"], []);
-    // First check if user is authenticated
+    // Update the handleTaskStatusChange function
+    const handleTaskStatusChange = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "Dashboard.useCallback[handleTaskStatusChange]": async (taskId, completed)=>{
+            if (!session?.user?.token) {
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].error("Authentication required", {
+                    id: `auth-${taskId}`
+                });
+                return;
+            }
+            // Use a consistent toast ID
+            const toastId = `task-update`;
+            // Show loading state first
+            __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].loading(`${completed ? "Completing" : "Reopening"} task...`, {
+                id: toastId
+            });
+            // Optimistic update
+            setTasks({
+                "Dashboard.useCallback[handleTaskStatusChange]": (prevTasks)=>prevTasks.map({
+                        "Dashboard.useCallback[handleTaskStatusChange]": (task)=>task.id === taskId || task._id === taskId ? {
+                                ...task,
+                                completed
+                            } : task
+                    }["Dashboard.useCallback[handleTaskStatusChange]"])
+            }["Dashboard.useCallback[handleTaskStatusChange]"]);
+            try {
+                const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].put(`/api/tasks/${taskId}`, {
+                    completed
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${session.user.token}`
+                    }
+                });
+                // Replace loading toast with success toast
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].success(`Task ${completed ? "completed" : "reopened"}`, {
+                    id: toastId
+                });
+            } catch (err) {
+                console.error("Error updating task:", err);
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].error("Failed to update task", {
+                    id: toastId
+                });
+                fetchTasks(); // Revert optimistic update on error
+            }
+        }
+    }["Dashboard.useCallback[handleTaskStatusChange]"], [
+        session,
+        fetchTasks
+    ]);
+    // Update the handleDeleteTask function
+    const handleDeleteTask = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
+        "Dashboard.useCallback[handleDeleteTask]": async (taskId)=>{
+            // Prevent multiple simultaneous delete calls
+            if (deleteInProgress.current) {
+                console.warn("Delete operation already in progress");
+                return;
+            }
+            if (!session?.user?.token) {
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].error("Authentication required", {
+                    id: `auth-del-${taskId}`
+                });
+                return;
+            }
+            // Set the in-progress flag
+            deleteInProgress.current = true;
+            // Use a consistent toast ID
+            const toastId = `task-delete`;
+            // Show loading state first
+            __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].loading("Deleting task...", {
+                id: toastId
+            });
+            // Optimistic delete
+            setTasks({
+                "Dashboard.useCallback[handleDeleteTask]": (prevTasks)=>prevTasks.filter({
+                        "Dashboard.useCallback[handleDeleteTask]": (task)=>task.id !== taskId && task._id !== taskId
+                    }["Dashboard.useCallback[handleDeleteTask]"])
+            }["Dashboard.useCallback[handleDeleteTask]"]);
+            try {
+                const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].delete(`/api/tasks/${taskId}`, {
+                    headers: {
+                        Authorization: `Bearer ${session.user.token}`
+                    }
+                });
+                if (response.data.success) {
+                    // Replace loading toast with success toast
+                    __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].success("Task deleted successfully", {
+                        id: toastId
+                    });
+                } else {
+                    throw new Error(response.data.message || "Delete failed");
+                }
+            } catch (err) {
+                console.error("Error deleting task:", err);
+                __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$hot$2d$toast$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toast"].error(`Failed to delete task: ${err.message || "Unknown error"}`, {
+                    id: toastId
+                });
+                fetchTasks(); // Refresh tasks on error
+            } finally{
+                deleteInProgress.current = false;
+            }
+        }
+    }["Dashboard.useCallback[handleDeleteTask]"], [
+        session,
+        fetchTasks
+    ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Dashboard.useEffect": ()=>{
             if (status === "unauthenticated") {
@@ -486,62 +636,30 @@ function Dashboard() {
         status,
         router
     ]);
-    // Then fetch tasks only when session is available
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Dashboard.useEffect": ()=>{
-            const fetchTasks = {
-                "Dashboard.useEffect.fetchTasks": async ()=>{
-                    if (status !== "authenticated" || !session) {
-                        return;
-                    }
-                    try {
-                        // Notice the token is inside session.user.token based on your data
-                        const token = session.user.token;
-                        if (!token) {
-                            console.error("No token available in session");
-                            setError("Authentication token missing");
-                            setLoading(false);
-                            return;
-                        }
-                        const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/api/tasks", {
-                            headers: {
-                                Authorization: `Bearer ${token}`
-                            }
-                        });
-                        setTasks(response.data);
-                    } catch (err) {
-                        console.error("Error fetching tasks:", err);
-                        setError("Failed to load tasks. Please try again.");
-                    } finally{
-                        setLoading(false);
-                    }
-                }
-            }["Dashboard.useEffect.fetchTasks"];
             fetchTasks();
         }
     }["Dashboard.useEffect"], [
-        session,
-        status
+        fetchTasks
     ]);
-    // Show loading while checking authentication or fetching tasks
     if (status === "loading" || status === "authenticated" && loading) {
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-            className: "flex justify-center items-center",
+            className: "flex justify-center items-center h-screen",
             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                 className: "text-2xl font-bold",
-                children: "Loading your workload don't Panic !"
+                children: "Loading your workload don't Panic!"
             }, void 0, false, {
                 fileName: "[project]/src/app/dashboard/page.jsx",
-                lineNumber: 82,
-                columnNumber: 7
+                lineNumber: 192,
+                columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/src/app/dashboard/page.jsx",
-            lineNumber: 81,
-            columnNumber: 12
+            lineNumber: 191,
+            columnNumber: 7
         }, this);
     }
-    // User is authenticated and tasks are loaded (or failed to load)
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("header", {
@@ -555,12 +673,12 @@ function Dashboard() {
                                     children: "Taskoo"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/dashboard/page.jsx",
-                                    lineNumber: 93,
+                                    lineNumber: 203,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/dashboard/page.jsx",
-                                lineNumber: 92,
+                                lineNumber: 202,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -571,44 +689,44 @@ function Dashboard() {
                                         children: session.user.email
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 97,
+                                        lineNumber: 207,
                                         columnNumber: 17
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         children: "No session data found."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 99,
+                                        lineNumber: 211,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                         className: "focus:outline-none text-white bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm p-2 m-2 dark:focus:ring-yellow-900 text-center",
-                                        onClick: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2d$auth$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["signOut"],
+                                        onClick: ()=>(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2d$auth$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["signOut"])(),
                                         children: "Logout"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 102,
+                                        lineNumber: 213,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/dashboard/page.jsx",
-                                lineNumber: 95,
+                                lineNumber: 205,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/dashboard/page.jsx",
-                        lineNumber: 91,
+                        lineNumber: 201,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/dashboard/page.jsx",
-                    lineNumber: 90,
+                    lineNumber: 200,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/dashboard/page.jsx",
-                lineNumber: 89,
+                lineNumber: 199,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -623,12 +741,12 @@ function Dashboard() {
                                     children: "Your Tasks"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/dashboard/page.jsx",
-                                    lineNumber: 114,
+                                    lineNumber: 226,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/dashboard/page.jsx",
-                                lineNumber: 113,
+                                lineNumber: 225,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -636,18 +754,18 @@ function Dashboard() {
                                     onTaskAdded: handleTaskAdded
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/dashboard/page.jsx",
-                                    lineNumber: 117,
+                                    lineNumber: 229,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/dashboard/page.jsx",
-                                lineNumber: 116,
+                                lineNumber: 228,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/dashboard/page.jsx",
-                        lineNumber: 112,
+                        lineNumber: 224,
                         columnNumber: 9
                     }, this),
                     error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -655,13 +773,14 @@ function Dashboard() {
                         children: error
                     }, void 0, false, {
                         fileName: "[project]/src/app/dashboard/page.jsx",
-                        lineNumber: 121,
+                        lineNumber: 233,
                         columnNumber: 11
                     }, this) : tasks.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                        children: "No tasks found."
+                        className: "text-center p-5 text-gray-500",
+                        children: "No tasks found. Add your first task!"
                     }, void 0, false, {
                         fileName: "[project]/src/app/dashboard/page.jsx",
-                        lineNumber: 123,
+                        lineNumber: 235,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "p-3 flex flex-col space-y-3 rounded-2xl border",
@@ -669,66 +788,115 @@ function Dashboard() {
                             const taskKey = task.id || task._id;
                             if (!taskKey) {
                                 console.warn("Task is missing an ID:", task);
-                                return null; // Skip tasks without an ID
+                                return null;
                             }
                             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "p-3 rounded-2xl border border-red-100 hover:shadow-sm transition-shadow",
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                        children: task.title
-                                    }, void 0, false, {
-                                        fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 139,
-                                        columnNumber: 19
-                                    }, this),
-                                    task.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        children: [
-                                            "Description: ",
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("i", {
-                                                children: task.description
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/app/dashboard/page.jsx",
-                                                lineNumber: 141,
-                                                columnNumber: 37
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 141,
-                                        columnNumber: 21
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                        children: [
-                                            "Status: ",
-                                            task.completed ? "Completed" : "Pending"
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/src/app/dashboard/page.jsx",
-                                        lineNumber: 143,
-                                        columnNumber: 19
-                                    }, this)
-                                ]
-                            }, taskKey, true, {
+                                className: `p-3 rounded-2xl border ${task.completed ? "border-gray-200 bg-gray-50" : "border-red-100"} hover:shadow-md transition-shadow`,
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "flex justify-between items-center",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                            className: "flex-1",
+                                            children: [
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    className: task.completed ? "line-through text-gray-500" : "",
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                                        children: task.title
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/app/dashboard/page.jsx",
+                                                        lineNumber: 264,
+                                                        columnNumber: 25
+                                                    }, this)
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                                    lineNumber: 259,
+                                                    columnNumber: 23
+                                                }, this),
+                                                task.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                    className: `${task.completed ? "line-through text-gray-400" : "text-gray-600"}`,
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("i", {
+                                                        children: task.description
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/app/dashboard/page.jsx",
+                                                        lineNumber: 274,
+                                                        columnNumber: 27
+                                                    }, this)
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                                    lineNumber: 267,
+                                                    columnNumber: 25
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                    className: `text-sm mt-1 ${task.completed ? "text-gray-400" : "text-gray-600"}`,
+                                                    children: [
+                                                        "Status: ",
+                                                        task.completed ? "Completed" : "Pending"
+                                                    ]
+                                                }, void 0, true, {
+                                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                                    lineNumber: 277,
+                                                    columnNumber: 23
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/app/dashboard/page.jsx",
+                                            lineNumber: 258,
+                                            columnNumber: 21
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                            className: "flex items-center gap-2",
+                                            children: [
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                    onClick: ()=>handleTaskStatusChange(taskKey, !task.completed),
+                                                    className: `px-3 py-1 rounded-full text-sm ${task.completed ? "bg-gray-200 hover:bg-gray-300 text-gray-700" : "bg-green-200 hover:bg-green-300 text-green-700"}`,
+                                                    children: task.completed ? "Reopen" : "Complete"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                                    lineNumber: 286,
+                                                    columnNumber: 23
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                    onClick: ()=>handleDeleteTask(taskKey),
+                                                    className: "px-3 py-1 rounded-full text-sm bg-red-200 hover:bg-red-300 text-red-700",
+                                                    children: "Delete"
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                                    lineNumber: 298,
+                                                    columnNumber: 23
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/app/dashboard/page.jsx",
+                                            lineNumber: 285,
+                                            columnNumber: 21
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/app/dashboard/page.jsx",
+                                    lineNumber: 257,
+                                    columnNumber: 19
+                                }, this)
+                            }, taskKey, false, {
                                 fileName: "[project]/src/app/dashboard/page.jsx",
-                                lineNumber: 135,
+                                lineNumber: 249,
                                 columnNumber: 17
                             }, this);
                         })
                     }, void 0, false, {
                         fileName: "[project]/src/app/dashboard/page.jsx",
-                        lineNumber: 125,
+                        lineNumber: 239,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/dashboard/page.jsx",
-                lineNumber: 111,
+                lineNumber: 223,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true);
 }
-_s(Dashboard, "+tDD+5XA+j3uxaNw1m5Flhhd/4Y=", false, function() {
+_s(Dashboard, "DwC5EuO6mew9k6UynBEHT9fobOY=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2d$auth$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useSession"],
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]

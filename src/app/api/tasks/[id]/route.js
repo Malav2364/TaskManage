@@ -20,53 +20,65 @@ export async function GET(req, { params }) {
     }
 }
 
-export async function PUT(req, { params }){
-    const token = await getToken({req, secret : process.env.NEXTAUTH_SECRET});
+// Fix the PUT handler
+export async function PUT(req, context) {
+    const token = await getToken({req, secret: process.env.NEXTAUTH_SECRET});
     if (!token) {
-        return NextResponse.json({error : "Unauthorized"}, {status : 401})
+        return NextResponse.json({error: "Unauthorized"}, {status: 401})
     }
+    
     try {
         const {completed} = await req.json();
+        // Get the params from context
+        const params = await context.params;
         const taskId = params.id;
 
         const task = await prisma.task.findUnique({
-            where : {id : taskId}
+            where: {id: taskId}
         })
 
         if (!task || task.userId !== token.user.id) {
-            return NextResponse.json({error : "Not authorized to update task"}, {status : 401})
+            return NextResponse.json({error: "Not authorized to update task"}, {status: 401})
         }
 
         const updatedTask = await prisma.task.update({
-            where : {id : taskId},
-            data : {completed},
+            where: {id: taskId},
+            data: {completed},
         })
         await redis.del("tasks");
-        return NextResponse.json({success : true, updatedTask})
+        return NextResponse.json({success: true, updatedTask})
     } catch (error) {
-        return NextResponse.json({success : false, message : error.message}, {status : 500})
+        return NextResponse.json({success: false, message: error.message}, {status: 500})
     }
 }
 
-export async function DELETE(req, { params }){
-    const token = await getToken({req, secret : process.env.NEXTAUTH_SECRET});
+// Fix the DELETE handler
+export async function DELETE(req, context) {
+    const token = await getToken({req, secret: process.env.NEXTAUTH_SECRET});
     if (!token) {
-        return NextResponse.json({error : "Unauthorized"}, {status : 401});
+        return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
+    
     try {
+        // Get the params from context
+        const params = await context.params;
         const taskId = params.id;
+        
         const task = await prisma.task.findUnique({
-            where : {id : taskId}
+            where: {id: taskId}
         })
+        
         if (!task || task.userId !== token.user.id) {
-            return NextResponse.json({error: "Not authorized to delete this task"}, {status : 401})
+            return NextResponse.json({error: "Not authorized to delete this task"}, {status: 401})
         }
+        
         await prisma.task.delete({
-            where : {id : taskId}
+            where: {id: taskId}
         });
+        
         await redis.del("tasks");
-        return NextResponse.json({success : true, message : "Task Deleted Successfully !"})
+        return NextResponse.json({success: true, message: "Task Deleted Successfully!"})
     } catch (error) {
-        return NextResponse.json({success : false, message : error.message}, {status : 500})
+        return NextResponse.json({success: false, message: error.message}, {status: 500})
     }
 }
